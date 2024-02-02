@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>软件大全</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 10px;
+            background-color: #f2f2f2;
+        }
+
+        main {
+            margin-top: 10px;
+        }
+
+        #software-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .software-item {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 10px;
+        }
+
+        form {
+            margin-top: 20px;
+        }
+
+        textarea {
+            width: 30%;
+            height: 60px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 10px;
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>软件大全</h1>
+    </header>
+
+    <main>
+        <ul id="software-list">
+            <!-- 此处将由 JavaScript 动态加载留言 -->
+        </ul>
+
+        <form id="comment-form">
+            <h2>留言</h2>
+            <label for="comment"></label>
+            <textarea id="comment" name="comment" required></textarea>
+            <br>
+            <button type="button" onclick="saveComment()">提交留言</button>
+        </form>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 软件大全</p>
+    </footer>
+
+    <script>
+        // GitHub仓库的用户名、仓库名和文件路径
+        const githubUsername = 'your-username';
+        const githubRepo = 'your-repo';
+        const filePath = 'comments.json';
+
+        function saveComment() {
+            // 获取留言内容
+            var comment = document.getElementById('comment').value;
+
+            // 通过GitHub API 发起请求
+            fetch(`https://api.github.com/repos/${githubUsername}/${githubRepo}/contents/${filePath}`)
+                .then(response => response.json())
+                .then(data => {
+                    // 解码base64格式的文件内容
+                    const comments = JSON.parse(atob(data.content));
+
+                    // 添加新留言
+                    comments.push(comment);
+
+                    // 将更新后的留言重新编码为base64
+                    const updatedContent = btoa(JSON.stringify(comments));
+
+                    // 发起保存更新的请求
+                    fetch(`https://api.github.com/repos/${githubUsername}/${githubRepo}/contents/${filePath}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': 'Bearer your-github-token', // 请替换为你的GitHub令牌
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: 'Update comments',
+                            content: updatedContent,
+                            sha: data.sha,
+                        }),
+                    })
+                    .then(response => response.json())
+                    .then(() => {
+                        // 刷新留言列表
+                        loadComments();
+                    });
+                });
+            
+            // 清空留言输入框
+            document.getElementById('comment').value = '';
+        }
+
+        function loadComments() {
+            // 发起请求获取留言列表
+            fetch(`https://api.github.com/repos/${githubUsername}/${githubRepo}/contents/${filePath}`)
+                .then(response => response.json())
+                .then(data => {
+                    // 解码base64格式的文件内容
+                    const comments = JSON.parse(atob(data.content));
+
+                    // 清空现有留言列表
+                    var softwareList = document.getElementById('software-list');
+                    softwareList.innerHTML = '';
+
+                    // 将留言显示在页面上
+                    comments.forEach(comment => {
+                        var newCommentItem = document.createElement('li');
+                        newCommentItem.className = 'software-item';
+                        newCommentItem.innerHTML = '<p>' + comment + '</p>';
+                        softwareList.appendChild(newCommentItem);
+                    });
+                });
+        }
+
+        // 页面加载完成后加载留言
+        window.addEventListener('load', loadComments);
+    </script>
+
+</body>
+</html>
